@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="UTF-8">
+	
+	<script src="../framework/framework.js"></script>
+	<!-- Best practice would dicatate loading these shaders from separate files. 
+	
+	They are loaded from this file for simplicity and clarity -->
+	<script id="fshader" type="x-shader/x-fragment">
+		varying lowp vec4 outColor;
+		
+		void main()
+		{
+			gl_FragColor = outColor;
+		}
+	</script>
+	
+	<script  id="vshader" type="x-shader/x-vertex">
+		attribute vec4 position;
+		attribute vec4 color;
+		
+		varying vec4 outColor;
+		
+		void main()
+		{
+			gl_Position = position;
+			outColor = color;
+		}
+	</script>
+	
+	<!-- In tutorial one, all the webgl lives at the top of the page -->
+	<script>
+		var gl; // Our openGL instance
+		
+		var vertexData = [
+			 0.0,    0.5, 0.0, 1.0,
+			 0.5, -0.366, 0.0, 1.0,
+			-0.5, -0.366, 0.0, 1.0,
+			 1.0,    0.0, 0.0, 1.0,
+			 0.0,    1.0, 0.0, 1.0,
+			 0.0,    0.0, 1.0, 1.0
+		];
+		
+		var positionBufferObject;
+
+		var theProgram;
+		
+		function initialize(canvas)
+		{
+			try 
+			{
+				gl = canvas.getContext("experimental-webgl");
+				gl.viewportWidth = canvas.width;
+				gl.viewportHeight = canvas.height;
+			}
+			catch (e) {}
+			
+			if (!gl)
+			{
+				alert("Could not launch WebGL.");
+			}
+		}
+		
+		function initializeProgram()
+		{
+			var shaderList = [];
+			
+			// Note the changes to these lines, we call out to the framework to load our shaders 
+			shaderList.push(framework.createShaderFromId(gl, gl.VERTEX_SHADER, "vshader"));
+			shaderList.push(framework.createShaderFromId(gl, gl.FRAGMENT_SHADER, "fshader"));
+			
+			theProgram = framework.createProgram(gl, shaderList);
+			
+			// We don't have access to the 'layout' command in GLSL, so we need to manually assign 
+			// an attribute
+			theProgram.vertexPositionAttribute = gl.getAttribLocation(theProgram, "position");
+			theProgram.vertexColorAttribute =    gl.getAttribLocation(theProgram, "color");
+			
+			for (var i = 0; i < shaderList.length; i++)
+			{	
+				gl.deleteShader(shaderList[i]);
+			}
+		}
+		
+		function initializeVertexBuffer()
+		{
+			positionBufferObject = gl.createBuffer(); // Corresponds to 'GenBuffers'
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferObject);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		}
+		
+		function display()
+		{
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+			
+			gl.useProgram(theProgram);
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferObject);
+			
+			gl.enableVertexAttribArray(theProgram.vertexPositionAttribute);
+			gl.enableVertexAttribArray(theProgram.vertexColorAttribute);
+			
+			gl.vertexAttribPointer(theProgram.vertexPositionAttribute, 4, gl.FLOAT, false, 0, 0);
+			gl.vertexAttribPointer(theProgram.vertexColorAttribute, 4, gl.FLOAT, false, 0, 48);
+			
+			gl.drawArrays(gl.TRIANGLES, 0, 3);
+			
+			gl.disableVertexAttribArray(theProgram.vertexPositionAttribute);
+			gl.disableVertexAttribArray(theProgram.vertexColorAttribute);
+			
+			gl.useProgram(null);
+		}
+		
+		function startWebGL()
+		{
+			var canvas = document.getElementById("tut01-canvas");
+			initialize(canvas);
+			initializeProgram();
+			initializeVertexBuffer();
+			
+			display();
+			
+			// No need to swap buffers. From what I understand (and I may be wrong)
+			// webgl is double buffered by default.
+		}
+	</script>
+</head>
+
+<body onload="startWebGL()">
+	<canvas id="tut01-canvas" style="border:none;" width=500 height=500></canvas>
+</body>
