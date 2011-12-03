@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="UTF-8">
+	
+	<!-- In tutorial one, all the webgl lives at the top of the page -->
+	<script>
+		var gl; // Our openGL instance
+		
+		var vertexPositions = [
+			 0.75,  0.75, 0.0, 1.0,
+			 0.75, -0.75, 0.0, 1.0,
+			-0.75, -0.75, 0.0, 1.0
+		];
+		
+		var positionBufferObject;
+		
+		var strVertexShader = 
+			"attribute vec4 position;\n" + // We can't use layout, so we must manually assign an attribute
+			"void main()\n" +
+			"{\n"+
+			"    gl_Position = position;\n" +
+			"}\n";
+		
+		var strFragmentShader = 
+			"void main()\n"+
+			"{\n"+
+			"    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n"+
+			"}\n";
+			
+		var theProgram;
+		
+		function createShader(shaderType, strShaderFile)
+		{
+			var shader = gl.createShader(shaderType);
+			
+			gl.shaderSource(shader, strShaderFile);
+			
+			gl.compileShader(shader);
+			
+			// In WebGL, replaces GlGetShaderiv
+			var status = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+			
+			if (status == false)
+			{
+				var infolog = gl.getShaderInfoLog(shader);
+				
+				var strShaderType = "";
+				
+				switch(shaderType)
+				{
+					case gl.VERTEX_SHADER: strShaderType = "vertex"; break;
+					case gl.GEOMETRY_SHADER: strShaderType = "geometry"; break;
+					case gl.FRAGMENT_SHADER: strShaderType = "fragment"; break;
+				}
+				
+				alert("Compile failure in " + strShaderType + ": " + infolog);
+			}
+			
+			return shader;
+		}
+		
+		function createProgram(shaderList)
+		{
+			var program = gl.createProgram();
+			
+			for (var i = 0; i < shaderList.length; i++)
+			{
+				gl.attachShader(program, shaderList[i]);
+			}
+			
+			gl.linkProgram(program);
+			
+			var status = gl.getProgramParameter(program, gl.LINK_STATUS);
+			
+			if (status == false)
+			{
+				var infolog = gl.getProgramInfoLog(program);
+				
+				alert("Linker failure: " + infolog);
+			}
+			
+			
+			return program;
+		}
+		
+		function initialize(canvas)
+		{
+			try 
+			{
+				gl = canvas.getContext("experimental-webgl");
+				gl.viewportWidth = canvas.width;
+				gl.viewportHeight = canvas.height;
+			}
+			catch (e) {}
+			
+			if (!gl)
+			{
+				alert("Could not launch WebGL.");
+			}
+		}
+		
+		function initializeProgram()
+		{
+			var shaderList = [];
+			
+			shaderList.push(createShader(gl.VERTEX_SHADER, strVertexShader));
+			shaderList.push(createShader(gl.FRAGMENT_SHADER, strFragmentShader));
+			
+			theProgram = createProgram(shaderList);
+			
+			// We don't have access to the 'layout' command in GLSL, so we need to manually assign 
+			// an attribute
+			theProgram.vertexPositionAttribute = gl.getAttribLocation(theProgram, "position");
+			
+			for (var i = 0; i < shaderList.length; i++)
+			{	
+				gl.deleteShader(shaderList[i]);
+			}
+		}
+		
+		function initializeVertexBuffer()
+		{
+			positionBufferObject = gl.createBuffer(); // Corresponds to 'GenBuffers'
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferObject);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions), gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		}
+		
+		function display()
+		{
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+			
+			gl.useProgram(theProgram);
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferObject);
+			gl.enableVertexAttribArray(0);
+			gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0); // Note: GL_FALSE is simply basic false now
+			
+			gl.drawArrays(gl.TRIANGLES, 0, 3);
+			
+			gl.disableVertexAttribArray(0);
+			gl.useProgram(null);
+		}
+		
+		function startWebGL()
+		{
+			var canvas = document.getElementById("tut01-canvas");
+			initialize(canvas);
+			initializeProgram();
+			initializeVertexBuffer();
+			
+			display();
+		}
+	</script>
+</head>
+
+<body onload="startWebGL()">
+	<canvas id="tut01-canvas" style="border:none;" width=500 height=500></canvas>
+</body>
